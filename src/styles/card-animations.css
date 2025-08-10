@@ -1,0 +1,71 @@
+/* Card 3D Transform Animations */
+.card {
+  perspective: 100vmax;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.card-content {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-background);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-slow);
+  transform-style: preserve-3d;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.card-content:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 2px;
+}
+
+/* PC用ホバー効果 */
+@media (any-hover: hover) {
+  .card-content:hover {
+    transform: rotate3d(0.05, 1, 0.05, 180deg);
+  }
+}
+
+/* SP用タップ効果 */
+.card-content.rotated {
+  transform: rotate3d(0.05, 1, 0.05, 180deg);
+}
+
+/* 画像読み込み前の状態 */
+.card-content:not(.loaded) {
+  background-color: var(--color-overlay);
+}
+
+/* 背景画像（初期状態で表示） */
+.card-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--border-radius-lg);
+  background: var(--background-image) no-repeat center center / cover;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* テキスト（裏面） */
+.card-content p {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-relaxed);
+  transform: rotateY(180deg);
+  background-color: var(--color-background);
+  padding: var(--spacing-md);
+  backface-visibility: hidden;
+}
