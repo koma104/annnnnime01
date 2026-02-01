@@ -4,8 +4,11 @@ import { PageIndicator } from '../../atoms/PageIndicator';
 
 type AnimationType = 'particles' | 'waves' | 'geometric' | 'noise';
 
+const FADE_DURATION_MS = 400;
+
 export const ScrollableP5Sections = () => {
   const [currentSection, setCurrentSection] = useState(0);
+  const [leavingSection, setLeavingSection] = useState<number | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,7 +18,12 @@ export const ScrollableP5Sections = () => {
         Math.floor(scrollPosition / windowHeight),
         3 // 最大セクション数 - 1
       );
-      setCurrentSection(sectionIndex);
+      setCurrentSection((prev) => {
+        if (prev !== sectionIndex) {
+          setLeavingSection(prev);
+        }
+        return sectionIndex;
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -26,19 +34,41 @@ export const ScrollableP5Sections = () => {
     };
   }, []);
 
-  const animations: AnimationType[] = ['particles', 'waves', 'geometric', 'noise'];
+  useEffect(() => {
+    if (leavingSection === null) return;
+    const timer = setTimeout(() => setLeavingSection(null), FADE_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [leavingSection]);
+
+  const animations: AnimationType[] = [
+    'particles',
+    'waves',
+    'geometric',
+    'noise',
+  ];
   const totalSections = animations.length;
 
   return (
     <>
+      {/* フェード時にbodyの明るい背景が透けないよう、常時黒の下地を表示 */}
+      <div
+        className="fixed top-0 left-0 w-full h-screen pointer-events-none"
+        style={{ zIndex: -2, backgroundColor: '#000' }}
+        aria-hidden
+      />
       {animations.map((type, index) => (
         <P5Section
           key={index}
           animationType={type}
-          isActive={currentSection === index}
+          isActive={currentSection === index || leavingSection === index}
+          isVisible={currentSection === index}
+          fadeDurationMs={FADE_DURATION_MS}
         />
       ))}
-      <PageIndicator currentPage={currentSection + 1} totalPages={totalSections} />
+      <PageIndicator
+        currentPage={currentSection + 1}
+        totalPages={totalSections}
+      />
     </>
   );
 };
@@ -46,9 +76,16 @@ export const ScrollableP5Sections = () => {
 type P5SectionProps = {
   animationType: AnimationType;
   isActive: boolean;
+  isVisible: boolean;
+  fadeDurationMs: number;
 };
 
-const P5Section = ({ animationType, isActive }: P5SectionProps) => {
+const P5Section = ({
+  animationType,
+  isActive,
+  isVisible,
+  fadeDurationMs,
+}: P5SectionProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const p5InstanceRef = useRef<p5 | null>(null);
 
@@ -61,7 +98,7 @@ const P5Section = ({ animationType, isActive }: P5SectionProps) => {
       p5InstanceRef.current = null;
     }
 
-    // アクティブなセクションのみアニメーションを開始
+    // アクティブなセクション（表示中 or フェードアウト中）のみアニメーションを開始
     if (!isActive) return;
 
     const sketch = getSketchForType(animationType);
@@ -81,12 +118,16 @@ const P5Section = ({ animationType, isActive }: P5SectionProps) => {
         containerRef.current = el as HTMLDivElement | null;
       }}
       className="fixed top-0 left-0 w-full h-screen pointer-events-none z-0"
-      style={{ zIndex: -1 }}
+      style={{
+        zIndex: isVisible ? 0 : -1,
+        opacity: isVisible ? 1 : 0,
+        transition: `opacity ${fadeDurationMs}ms ease-out`,
+      }}
     />
   );
 };
 
-const getSketchForType = (type: AnimationType): (p: p5) => void => {
+const getSketchForType = (type: AnimationType): ((p: p5) => void) => {
   switch (type) {
     case 'particles':
       return particlesSketch;
@@ -207,7 +248,12 @@ const particlesSketch = (p: p5) => {
     p.background(0, 0, 0);
   };
 
-  const createParticle = (p: p5, x: number, y: number, mouseSpeed: number): Particle => {
+  const createParticle = (
+    p: p5,
+    x: number,
+    y: number,
+    mouseSpeed: number
+  ): Particle => {
     const angle = p.random(p.TWO_PI);
     const baseSpeed = p.map(p.constrain(mouseSpeed, 0, 10), 0, 10, 0.8, 2.5);
     const speed = p.random(baseSpeed * 0.8, baseSpeed * 1.2);
@@ -228,7 +274,8 @@ const particlesSketch = (p: p5) => {
 
 // 2. 波紋エフェクト
 const wavesSketch = (p: p5) => {
-  const waves: Array<{ x: number; y: number; radius: number; life: number }> = [];
+  const waves: Array<{ x: number; y: number; radius: number; life: number }> =
+    [];
 
   p.setup = () => {
     p.createCanvas(p.windowWidth, p.windowHeight);
@@ -362,4 +409,3 @@ const noiseSketch = (p: p5) => {
     p.background(0, 0, 0);
   };
 };
-

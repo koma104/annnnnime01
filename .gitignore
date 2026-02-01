@@ -25,3 +25,6 @@ dist-ssr
 
 # Prettier
 .prettierrc.local
+
+# Local docs (not for remote)
+docs/
